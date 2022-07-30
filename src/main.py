@@ -6,6 +6,8 @@ import dht11
 import RPi.GPIO as GPIO
 from RPLCD.i2c import CharLCD
 
+import cpu_state
+
 DHT_PIN = 17
 
 def set_gpio():
@@ -32,6 +34,12 @@ def lcd_echo(lcd: CharLCD, temperature: str, humidity):
     lcd.write_string(f'Temperature: {temperature:-3.1f}')
     lcd.cursor_pos = (1, 0)
     lcd.write_string(f'humidity: {humidity:-3.1f}')
+    lcd.cursor_pos = (2, 0)
+    cpu_temp = cpu_state.get_cpu_temp()
+    cpu_rate = cpu_state.get_cpu_rate()
+    lcd.write_string(f'CpuTemp: {cpu_temp}')
+    lcd.cursor_pos = (3, 0)
+    lcd.write_string(f'CpuRate: {cpu_rate[0]}')
     lcd.cursor_pos = (0, 0)
     return
     
