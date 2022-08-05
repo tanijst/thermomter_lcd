@@ -3,20 +3,20 @@
 import subprocess
 import time
 
-def cmd_run(cmd: str):
+def _com_run(cmd: str):
     return subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, 
             stderr=subprocess.PIPE, text=True)
 
 def get_cpu_temp() -> str:
     test_cmd = 'vcgencmd measure_temp'
-    result = cmd_run(test_cmd).stdout.split('=')
+    result = _com_run(test_cmd).stdout.split('=')
     cpu_temp = result[1]
     return cpu_temp[:4]
 
-def cmd_cpu_rate() -> list:
+def _cmd_cpu_rate() -> list:
     # list[busy_time, all_time]
     cpu_cmd = 'cat /proc/stat | grep cpu'
-    result = cmd_run(cpu_cmd).stdout.splitlines()
+    result = _com_run(cpu_cmd).stdout.splitlines()
     result_list = []
     for line in result:
         cpu_state_list = line.split()
@@ -28,9 +28,9 @@ def cmd_cpu_rate() -> list:
     return result_list
 
 def get_cpu_rate(delay: int=1) -> list:
-    pre_cpu_rate = cmd_cpu_rate()
+    pre_cpu_rate = _cmd_cpu_rate()
     time.sleep(delay)
-    now_cpu_rate = cmd_cpu_rate()
+    now_cpu_rate = _cmd_cpu_rate()
     cpu_rate_list = []
     for pre, now in zip(pre_cpu_rate, now_cpu_rate):
         diff = [now - pre for pre, now in zip(pre, now)]

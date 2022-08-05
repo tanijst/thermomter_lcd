@@ -10,58 +10,73 @@ import cpu_state
 
 DHT_PIN = 17
 
-def set_gpio():
-    # initialize GPIO
-    GPIO.setwarnings(False)
-    GPIO.setmode(GPIO.BCM)
-    #GPIO.cleanup().
+# 日本語も表示できるクラス
+class LCD(CharLCD):
+    def __init__(self, i2c_expander, address, port, cols, rows, dotsize, charmap, auto_linebreaks, backlight_enabled):
+        super().__init__(i2c_expander, address, None, port, cols, rows, dotsize, charmap, auto_linebreaks, backlight_enabled)
+    
+    def output(self, *args :str):
+        i = 0
+        for arg in args:
+            self.cursor_pos = (i, 0)
+            print(arg)
+            if not arg is None:
+                self.write_string(arg)
+            i += 1
+        
+    def japanese(self):
+        pass
 
-def lcd_init():
-    lcd = CharLCD(i2c_expander='PCF8574', address=0x27, port=1,
+class ThermomterLCD(object):
+    #DHT_PIN = 17
+    def __init__(self):
+        self._set_gpio()
+        self._thermomter_reader = dht11.DHT11(pin=DHT_PIN)
+        self._lcd = LCD(i2c_expander='PCF8574', address=0x27, port=1,
             cols=20, rows=4, dotsize=8, charmap='A02', 
             auto_linebreaks=True,
             backlight_enabled=True)
-    return lcd
-
-def thermomter():
-    set_gpio()
-    thermomter_reader = dht11.DHT11(pin=DHT_PIN)
-    result = thermomter_reader.read()
-    return result
-
-def lcd_echo(lcd: CharLCD, temperature: str, humidity):
-    #lcd.clear()
-    lcd.write_string(f'Temperature: {temperature:-3.1f}')
-    lcd.cursor_pos = (1, 0)
-    lcd.write_string(f'humidity: {humidity:-3.1f}')
-    lcd.cursor_pos = (2, 0)
-    cpu_temp = cpu_state.get_cpu_temp()
-    cpu_rate = cpu_state.get_cpu_rate()
-    lcd.write_string(f'CpuTemp: {cpu_temp}')
-    lcd.cursor_pos = (3, 0)
-    lcd.write_string(f'CpuRate: {cpu_rate[0]}')
-    lcd.cursor_pos = (0, 0)
-    return
+        self.main_loop()
+         
+    def __del__(self):
+        GPIO.cleanup()
+        self._lcd.clear()
     
-def main():
-    lcd = lcd_init()
-    while True:
-        try:
-            time.sleep(1)
-            read_result = thermomter()
-            if read_result.is_valid():
-                lcd_echo(lcd, read_result.temperature, read_result.humidity)
-            else:
-                # error code
-                pass
-        except Exception as err:
-            print(err)
-            break
-        except KeyboardInterrupt:
-            break
+    def _set_gpio(self):
+        GPIO.setwarnings(False)
+        GPIO.setmode(GPIO.BCM)
 
-    GPIO.cleanup()
-    lcd.clear()
+    def _get_thermomter(self):
+        result = self._thermomter_reader.read()
+        #print(result.is_valid())
+        if not result.is_valid():
+            return None, None
+        return str(result.temperature), str(result.humidity)
+
+    # TODO イテレータで受け取るようにする
+    def _output_handler(self, temperature: int, humidity: int, cpu_temp: str, cpu_rate: list):
+        str_temp = None
+        str_humi = None
+        if not temperature is None:
+            str_temp = f'Temperature: {temperature}'
+        if not humidity is None:
+            str_humi = f'Humidity: {humidity}'
+        str_cpu_temp = f'CPU Temp: {cpu_temp}'
+        str_cpu_rate = f'CPU Rate: {cpu_rate[0]}'
+        self._lcd.output(str_temp, str_humi, str_cpu_temp, str_cpu_rate)
+
+    def main_loop(self):
+        while True:
+            try:
+                time.sleep(1)
+                temperature, humidity = self._get_thermomter()
+                cpu_temp = cpu_state.get_cpu_temp()
+                cpu_rate = cpu_state.get_cpu_rate()
+                self._output_handler(temperature, humidity, cpu_temp, cpu_rate)
+            except Exception as err:
+                print(err)
+            except KeyboardInterrupt:
+                break
 
 if __name__ == '__main__':
-    main()
+    ThermomterLCD()
