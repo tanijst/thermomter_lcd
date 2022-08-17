@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 # -*- coding:utf-8 -*-
+import time
 
 import HD44780 as LCD
 from RPLCD.i2c import CharLCD
@@ -57,6 +58,11 @@ def charlcd():
     lcd.cursor_pos = (3, 0)
     lcd.write_string(u'\x00')
     # lcd.write_string(u'Temperature: 30\xc3C')
+    lcd.cursor_pos = (0, 0)
+    time.sleep(1)
+    # for i in range(20):
+    #     lcd.cursor_pos = (0, i)
+    #     # lcd.write(0x20)
 
 # hd44()
 charlcd()
